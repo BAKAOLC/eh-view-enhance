@@ -29,7 +29,13 @@ function main(MATCHER: Matcher<any>, autoOpen: boolean, flowVision: boolean): De
 
   // UI Manager
   const PH: PageHelper = new PageHelper(HTML, () => PF.chapters, () => DL.downloading);
-  const BIFM: BigImageFrameManager = new BigImageFrameManager(HTML, (index) => PF.chapters[index]);
+  const BIFM: BigImageFrameManager = new BigImageFrameManager(HTML, (index) => PF.chapters[index], (index) => {
+    const chapter = PF.chapters[index];
+    if (!chapter) return;
+    EBUS.emit("pf-change-chapter", index, chapter);
+    PF.beforeInit?.();
+    PF.changeChapter(index).then(PF.afterInit).catch(PF.onFailed);
+  });
   new FullViewGridManager(HTML, BIFM, flowVision);
 
   const events = initEvents(HTML, BIFM, IFQ, IL, PH);

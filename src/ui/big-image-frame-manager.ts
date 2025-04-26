@@ -29,6 +29,7 @@ export class BigImageFrameManager {
   vidController?: VideoControl;
   chapterIndex: number = 0;
   getChapter: (index: number) => Chapter;
+  changeChapter: (index: number) => void;
   loadingHelper: HTMLElement;
   currLoadingState: Map<number, number> = new Map();
 
@@ -41,11 +42,12 @@ export class BigImageFrameManager {
   // but we want to only start rendering when the corresponding image index is detected.
   intersectingIndexLock: boolean = false;
 
-  constructor(HTML: Elements, getChapter: (index: number) => Chapter) {
+  constructor(HTML: Elements, getChapter: (index: number) => Chapter, changeChapter: (index: number) => void) {
     this.html = HTML;
     this.root = HTML.bigImageFrame;
     this.debouncer = new Debouncer();
     this.getChapter = getChapter;
+    this.changeChapter = changeChapter;
     this.scrollerY = new Scroller(this.root);
     this.scrollerX = new Scroller(this.root, undefined, "x");
 
@@ -471,6 +473,15 @@ export class BigImageFrameManager {
     if (index === undefined || isNaN(index)) return;
     const queue = this.getChapter(this.chapterIndex)?.queue;
     if (!queue || queue.length === 0) return;
+    if (this.changeChapter) {
+      if (oriented === "prev" && index === 0) {
+        this.changeChapter(this.chapterIndex - 1);
+        return;
+      } else if (oriented === "next" && index === queue.length - 1) {
+        this.changeChapter(this.chapterIndex + 1);
+        return;
+      }
+    }
     index = oriented === "next" ? index + conf.paginationIMGCount : index - conf.paginationIMGCount;
     if (conf.paginationIMGCount > 1) {
       index += fixStep;

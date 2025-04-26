@@ -11368,6 +11368,7 @@ before contentType: ${contentType}, after contentType: ${blob.type}
     vidController;
     chapterIndex = 0;
     getChapter;
+    changeChapter;
     loadingHelper;
     currLoadingState = /* @__PURE__ */ new Map();
     scrollerY;
@@ -11378,11 +11379,12 @@ before contentType: ${contentType}, after contentType: ${blob.type}
     // When bifm opens an image, the IntersectionObserver will immediately start detecting and rendering after 50 milliseconds, 
     // but we want to only start rendering when the corresponding image index is detected.
     intersectingIndexLock = false;
-    constructor(HTML, getChapter) {
+    constructor(HTML, getChapter, changeChapter) {
       this.html = HTML;
       this.root = HTML.bigImageFrame;
       this.debouncer = new Debouncer();
       this.getChapter = getChapter;
+      this.changeChapter = changeChapter;
       this.scrollerY = new Scroller(this.root);
       this.scrollerX = new Scroller(this.root, void 0, "x");
       this.container = document.createElement("div");
@@ -11774,6 +11776,15 @@ before contentType: ${contentType}, after contentType: ${blob.type}
       if (index === void 0 || isNaN(index)) return;
       const queue = this.getChapter(this.chapterIndex)?.queue;
       if (!queue || queue.length === 0) return;
+      if (this.changeChapter) {
+        if (oriented === "prev" && index === 0) {
+          this.changeChapter(this.chapterIndex - 1);
+          return;
+        } else if (oriented === "next" && index === queue.length - 1) {
+          this.changeChapter(this.chapterIndex + 1);
+          return;
+        }
+      }
       index = oriented === "next" ? index + conf.paginationIMGCount : index - conf.paginationIMGCount;
       if (conf.paginationIMGCount > 1) {
         index += fixStep;
@@ -12265,7 +12276,13 @@ before contentType: ${contentType}, after contentType: ${blob.type}
     const PF = new PageFetcher(IFQ, MATCHER);
     const DL = new Downloader(HTML, IFQ, IL, PF, MATCHER);
     const PH = new PageHelper(HTML, () => PF.chapters, () => DL.downloading);
-    const BIFM = new BigImageFrameManager(HTML, (index) => PF.chapters[index]);
+    const BIFM = new BigImageFrameManager(HTML, (index) => PF.chapters[index], (index) => {
+      const chapter = PF.chapters[index];
+      if (!chapter) return;
+      EBUS.emit("pf-change-chapter", index, chapter);
+      PF.beforeInit?.();
+      PF.changeChapter(index).then(PF.afterInit).catch(PF.onFailed);
+    });
     new FullViewGridManager(HTML, BIFM, flowVision);
     const events = initEvents(HTML, BIFM, IFQ, IL, PH);
     addEventListeners(events, HTML, BIFM, DL, PH);
