@@ -858,6 +858,7 @@ export class BigImageFrameManager {
         elem.classList.add("bifm-node-hide")
       }
       if (reused || elem.childElementCount === 0) {
+        elem.style.aspectRatio = "";
         elem.innerHTML = "";
         elem.appendChild(this.newMediaNode(queue[i]));
       }
